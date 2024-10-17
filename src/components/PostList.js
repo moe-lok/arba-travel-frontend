@@ -20,19 +20,17 @@ function PostList() {
       setPosts(response.data);
     } catch (error) {
       setError('Failed to fetch posts');
-      console.error('Error fetching posts', error);
     }
   };
 
   const handleComment = async (postId) => {
     try {
-      await api.post(`posts/${postId}/comments/`, { text: newComment });
+      const response = await api.post(`posts/${postId}/comments/`, { text: newComment });
       setNewComment('');
-      setCommentingOn(null);
-      fetchPosts(); // Refresh posts to show new comment
+      fetchPosts();
     } catch (error) {
-      setError('Failed to add comment');
-      console.error('Error adding comment', error);
+      console.error('Error adding comment:', error.response?.data || error.message);
+      setError('Failed to add comment: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -44,7 +42,6 @@ function PostList() {
       fetchPosts();
     } catch (error) {
       setError('Failed to edit post');
-      console.error('Error editing post', error);
     }
   };
 
@@ -54,7 +51,6 @@ function PostList() {
       fetchPosts();
     } catch (error) {
       setError('Failed to delete post');
-      console.error('Error deleting post', error);
     }
   };
 
@@ -66,7 +62,6 @@ function PostList() {
       fetchPosts();
     } catch (error) {
       setError('Failed to edit comment');
-      console.error('Error editing comment', error);
     }
   };
 
@@ -76,20 +71,18 @@ function PostList() {
       fetchPosts();
     } catch (error) {
       setError('Failed to delete comment');
-      console.error('Error deleting comment', error);
     }
   };
 
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
+  const currentUserEmail = localStorage.getItem('username');
 
   return (
     <div>
       <h2>Posts</h2>
+      {error && <p style={{color: 'red'}}>{error}</p>}
       {posts.map(post => (
         <div key={post.id}>
-          <h3>{post.user}</h3>
+          <h3>{post.user.name}</h3>
           {editingPost === post.id ? (
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -105,11 +98,15 @@ function PostList() {
           ) : (
             <>
               <p>{post.caption}</p>
-              <button onClick={() => {
-                setEditingPost(post.id);
-                setEditContent(post.caption);
-              }}>Edit</button>
-              <button onClick={() => handleDeletePost(post.id)}>Delete</button>
+              {post.user.email === currentUserEmail && (
+                <>
+                  <button onClick={() => {
+                    setEditingPost(post.id);
+                    setEditContent(post.caption);
+                  }}>Edit</button>
+                  <button onClick={() => handleDeletePost(post.id)}>Delete</button>
+                </>
+              )}
             </>
           )}
           {post.image && <img src={post.image} alt="Post" />}
@@ -130,29 +127,33 @@ function PostList() {
                 </form>
               ) : (
                 <>
-                  <p>{comment.user}: {comment.text}</p>
-                  <button onClick={() => {
-                    setEditingComment(comment.id);
-                    setEditContent(comment.text);
-                  }}>Edit</button>
-                  <button onClick={() => handleDeleteComment(comment.id)}>Delete</button>
+                  <p>{comment.user.name}: {comment.text}</p>
+                  {comment.user.email === currentUserEmail && (
+                    <>
+                      <button onClick={() => {
+                        setEditingComment(comment.id);
+                        setEditContent(comment.text);
+                      }}>Edit</button>
+                      <button onClick={() => handleDeleteComment(comment.id)}>Delete</button>
+                    </>
+                  )}
                 </>
               )}
             </div>
           ))}
           {commentingOn === post.id ? (
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              handleComment(post.id);
-            }}>
-              <input 
-                type="text" 
-                value={newComment} 
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment"
-              />
-              <button type="submit">Post Comment</button>
-            </form>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            handleComment(post.id);
+          }}>
+            <input 
+              type="text" 
+              value={newComment} 
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment"
+            />
+            <button type="submit">Post Comment</button>
+          </form>
           ) : (
             <button onClick={() => setCommentingOn(post.id)}>Add Comment</button>
           )}
