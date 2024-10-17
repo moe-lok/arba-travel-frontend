@@ -4,13 +4,25 @@ const api = axios.create({
   baseURL: 'http://localhost:8000/api/',
 });
 
-// This interceptor should not be used for login requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token && !config.url.endsWith('login/')) {
+  if (token) {
     config.headers.Authorization = `Token ${token}`;
   }
   return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
+api.interceptors.response.use((response) => {
+  return response;
+}, (error) => {
+  if (error.response && error.response.status === 401) {
+    // If we receive a 401 Unauthorized, clear the token and redirect to login
+    localStorage.clear();
+    window.location = '/login';
+  }
+  return Promise.reject(error);
 });
 
 export default api;
